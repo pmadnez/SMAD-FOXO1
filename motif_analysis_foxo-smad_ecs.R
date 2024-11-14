@@ -8,21 +8,19 @@ library(chromVAR)
 library(chromVARmotifs)
 library(motifmatchr)
 library(TFBSTools)
-setwd("Z:/Users/Paul/Projects/SMAD_FOXO1/scATACseq_mm/")
-getwd()
+setwd("Z:/data/")
+#load pre-processed Seurat object
 final_set <- readRDS(file = "final-set_with_daa.rds")
-##issue was here, that data was mapped to full chroms incl scaffolds, needs to be removed, as not present in used genome
-
 main.chroms <- standardChromosomes(BSgenome.Mmusculus.UCSC.mm10)
 keep.peaks <- as.logical(seqnames(granges(final_set)) %in% main.chroms)
 final_set[["peaks"]] <- subset(final_set[["peaks"]], features = rownames(final_set[["peaks"]])[keep.peaks])
 
 ###subset for ECs
-endothelial_cells <- subset(final_set, idents = c("EC1", "EC2", "EC3", "EC4", "EC5", "EC6", "EC7", "EC8"))
+endothelial_cells <- subset(final_set, idents = c("EC1", "EC2", "EC3", "EC4", "EC5", "EC6", "EC7"))
 
 ###get motifs
 
-# Step 1: Extract ATAC-seq count matrix from Seurat object
+#Extract ATAC-seq count matrix from Seurat object
 counts_matrix <- GetAssayData(endothelial_cells, assay = "peaks", slot = "counts")
 # Filter out peaks (rows) where there are no counts in any samples
 non_zero_peaks <- rowSums(counts_matrix) > 0
@@ -34,14 +32,14 @@ counts_matrix_filtered <- counts_matrix[non_zero_peaks, ]
 # Step 2: Extract peak information (GRanges) from Seurat object
 peakSet <- granges(endothelial_cells_filtered)
 
-# Step 3: Create a SummarizedExperiment object for chromVAR
+#Create a SummarizedExperiment object for chromVAR
 chromVarCounts <- SummarizedExperiment(assays = list(counts = counts_matrix_filtered), rowRanges = peakSet)
 
-# Step 4: Add GC bias to the object (needed for chromVAR)
+# Add GC bias to the object (needed for chromVAR)
 chromVarCounts <- addGCBias(chromVarCounts, genome = BSgenome.Mmusculus.UCSC.mm10)
 
-###I rather want specific new motifs, so thats why:
-motif_ids <- c("MA1153.1", "MA0535.1", "MA0795.1", "MA1557.1", "MA0480.1", "MA0157.1", "MA0848.1")  # Replace with your list of motif IDs
+###Get JASPAR PFMs for desired motifs:
+motif_ids <- c("MA0535.1","MA0480.1")  # Replace with your list of motif IDs
 motif_ids
 motifs <- lapply(motif_ids, function(id) getMatrixByID(JASPAR2020, ID = id))
 all(sapply(motifs, function(m) class(m) == "PFMatrix"))
@@ -50,14 +48,7 @@ all(sapply(motifs, function(m) class(m) == "PFMatrix"))
 motifs_combined <- do.call(PFMatrixList, motifs)
 
 
-# Step 6: Filter for FOXO and SMAD motifs using regular expressions on motif names
-foxo_motifs <- motifs[grepl("Fox", names(motifs))]
-smad_motifs <- motifs[grepl("Smad", names(motifs))]
-
-# Step 7: Combine FOXO and SMAD motifs
-selected_motifs <- c(foxo_motifs, smad_motifs)
-
-# Step 8: Match these motifs to the peak set
+# Match these motifs to the peak set
 motif_ix <- matchMotifs(motifs_combined, peakSet, genome = BSgenome.Mmusculus.UCSC.mm10)
 
 
@@ -65,16 +56,16 @@ motif_ix <- matchMotifs(motifs_combined, peakSet, genome = BSgenome.Mmusculus.UC
 deviations <- computeDeviations(object = chromVarCounts, annotations = motif_ix)
 
 
-# Step 1: Get the motif activity (deviation scores) from the deviations object
+# Get the motif activity (deviation scores) from the deviations object
 motif_activities <- assay(deviations)  # Deviation scores are stored in an assay
 
-# Step 2: Get the cell type annotations from your Seurat object
+# Get the cell type annotations from your Seurat object
 cell_types <- endothelial_cells_filtered@meta.data$predicted.id
 
 # Ensure cell types match the number of cells in motif_activities
 stopifnot(length(cell_types) == ncol(motif_activities))
 
-# Step 3: Combine motif activities with cell type annotations into a data frame
+# Combine motif activities with cell type annotations into a data frame
 library(tidyverse)
 
 # Convert motif activities to data frame and transpose for easier plotting
@@ -83,8 +74,9 @@ motif_activity_df <- as.data.frame(t(motif_activities)) %>%
 
 # Check the structure of the motif activity data frame
 head(motif_activity_df)
-names(motif_activity_df) <- c("MA1153.1", "MA0535.1", "MA0795.1", "MA1557.1", "MA0480.1", "MA0157.1", "MA0848.1", "CellType")
+names(motif_activity_df) <- c("MA0535.1", "MA0480.1", "CellType")
 
+## make violin plot to display motif activity
 ggplot(motif_activity_df, aes(x = CellType, y = MA0535.1, fill = CellType)) +
   geom_violin() +
   geom_boxplot(width = 0.1, color = "black", alpha = 0.5) + 
@@ -104,7 +96,7 @@ umap_data$Foxo1_Motif_Activity <- endothelial_cells_filtered$Foxo1_Motif_Activit
 umap_data$Smad1_Motif_Activity <- endothelial_cells_filtered$Smad1_Motif_Activity
 
 
-##including cell type 
+##make umap plots of cell clusters and motif activities
 
 #create small axis for umap plots
 axis <- ggh4x::guide_axis_truncated(
@@ -167,7 +159,7 @@ ggsave("umap_EC-cell-types_final.png", plot = p1, dpi = 300)
 ggsave("umap_FOXO-activity_final.png", plot = p2, dpi = 300)
 ggsave("umap_SMAD-activity_final.png", plot = p3, dpi = 300)
 
-
+##make plot of cell proportions per condition
 # Extract cell types and conditions from metadata
 cell_types <- endothelial_cells_filtered$predicted.id
 conditions <- endothelial_cells_filtered$orig.ident  # Use active.ident for conditions
@@ -180,10 +172,8 @@ proportions <- data_for_proportions %>%
   group_by(Condition, CellType) %>%
   summarise(Count = n(), .groups = 'drop') %>%
   mutate(Proportion = Count / sum(Count))
-proportions <- proportions %>%
-  mutate(CellType = recode(CellType, "EC8" = "EC7"))
 # Create the bar plot
-p3 <- ggplot(proportions, aes(x = Condition, y = Proportion, fill = CellType)) +
+p4 <- ggplot(proportions, aes(x = Condition, y = Proportion, fill = CellType)) +
   geom_bar(stat = "identity", position = "stack", color = "black") +
   labs(y = "Ratio cell type/ all cells") +
   scale_y_continuous(labels = scales::percent) +  # Show proportions as percentages
@@ -191,5 +181,5 @@ p3 <- ggplot(proportions, aes(x = Condition, y = Proportion, fill = CellType)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 # Display the plot
-print(p3)
+print(p4)
 
