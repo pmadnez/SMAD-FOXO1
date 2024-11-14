@@ -1,5 +1,6 @@
-# example experimental design: n=3 mouse ATAC-seq biological replicates for two conditions: treat and control 
-
+#example experimental design: n=2/3 mouse ATAC-seq biological replicates for two conditions: treat and control 
+#This approach can be adjusted to whatever conditions you might have (change number of replicates etc.)
+#peak files come from the ENCODE pipeline
 library(GenomicRanges)
 library(csaw)
 
@@ -9,7 +10,7 @@ library(csaw)
 
 # starting from MACS2 filtered broadpeaks
 # read replicate broadPeak files
-setwd("Z:/Shared Workspaces/Paul2Jerome/Mechanogenomics/Fumiko SMAD mice/ATAC-seq/")
+setwd("Z:/data/")
 a <- read.table("samplesheet_new.csv", sep = ",", header = T)
 
 treat1.peaks <- read.table(a$Peaks[8], sep="\t")[,1:3]
@@ -108,11 +109,7 @@ peak.counts.loess <- normOffsets(peak.counts.loess, se.out=TRUE) # type="loess" 
 # DIFFERENTIAL ACCESSIBILITY ANALYSIS
 
 # set working windows for the desired analysis
-#working.windows <- peak.counts.tmm # MACS2 peaks only, standard TMM normalization based on binned counts
 working.windows <- peak.counts.loess # MACS2 peaks only, for trended biases
-# working.windows <- counts.local.tmm # csaw de novo peaks by local enrichment, standard TMM normalization based on binned counts
-# working.windows <- counts.local.loess # csaw de novo peaks by local enrichment, for trended biases
-# SEE THE CSAW MANUAL FOR MORE INFO ON NORMALIZATION METHODS
 ###########
 
 # setup design matrix
@@ -132,14 +129,12 @@ fit <- glmQLFit(y, design, robust=TRUE)
 
 # testing for differentially-accessible windows
 results <- glmQLFTest(fit, contrast=makeContrasts(treat-control, levels=design))
-# head(results$table)
 rowData(working.windows) <- cbind(rowData(working.windows), results$table) # combine GRanges rowdata with differential statistics
-# working.windows@rowRanges
+
 
 # merge nearby windows
 # up to "tol" distance apart: 500 bp in this case; max merged window width: 5000 bp
 merged.peaks <- mergeWindows(rowRanges(working.windows), tol=500L, max.width=5000L)
-# summary(width(merged.peaks$region))
 # should merge some peaks; change as desired
 
 # use most significant window as statistical representation for p-value and FDR for merged windows
@@ -162,18 +157,6 @@ write.table(final.merged.peaks, "arch.ctrl_vs_arch.ko_csaw_DA-windows_all.txt", 
 write.table(final.merged.peaks.sig, "arch.ctrl_vs_arch.ko_csaw_DA-windows_significant.txt", sep="\t", quote=F, col.names=T, row.names=F)
 
 ###########################################
-
-# Generate MA plot
-library(ggplot2)
-
-final.merged.peaks$sig <- "n.s."
-final.merged.peaks$sig[final.merged.peaks$FDR < FDR.thresh] <- "significant"
-
-ggplot(data=data.frame(final.merged.peaks),
-       aes(x = logCPM, y = logFC, col = factor(sig, levels=c("n.s.", "significant")))) + 
-  geom_point() + scale_color_manual(values = c("black", "red")) + 
-  #geom_smooth(inherit.aes=F, aes(x = logCPM, y = logFC), method = "loess", span=0.5) + # smoothed loess fit; can add span=0.5 to reduce computation load/time
-  geom_hline(yintercept = 0) + labs(col = NULL)
 
 
 ####################################
