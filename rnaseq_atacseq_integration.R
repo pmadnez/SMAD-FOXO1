@@ -1,15 +1,17 @@
 library(ggplot2)
 library(dplyr)
 library(ggrepel)
-#install.packages
 
-setwd("Z:/Shared Workspaces/Paul2Jerome/Mechanogenomics/Endothel Zellen/RNAseq/salmon_pm/")
+setwd("Z:/data/")
+###read RNAseq and ATAC-Seq data
 os_ps.rnaseq <- read.table("deseq2_os-vs-ps.salmon.hgnc-symbol.pval.fc.csv")
 os_ps_atacseq <- read.table("Z:/Shared Workspaces/Paul2Jerome/Mechanogenomics/Endothel Zellen/ATAC-seq/Encode pipeline/RUVSeq norm/os-ps/results_RUVr_deseq2_k3_default_os-ps.annotated.csv", sep = " ")
 
+#get rid of duplicates to be able to display in plot (multiple peaks per gene is difficult, keep only highest absolute peaks)
 atac_wo_dups <- os_ps_atacseq[order(os_ps_atacseq$SYMBOL, -abs(os_ps_atacseq$log2FoldChange) ), ]
 atac_wo_dups <- atac_wo_dups[ !duplicated(atac_wo_dups$SYMBOL), ]
 
+##to avoid irritation, also get rid of transcript variants and only keep the highest expressed one (highest FC)
 rna_wo_dups <- os_ps.rnaseq[order(os_ps.rnaseq$hgnc_symbol, -abs(os_ps.rnaseq$log2FoldChange) ), ]
 rna_wo_dups <- rna_wo_dups[ !duplicated(rna_wo_dups$hgnc_symbol), ]
 
@@ -30,7 +32,7 @@ merged_for_plot <- merged_for_plot %>%
 cor(merged_for_plot$log2FoldChange.x, merged_for_plot$log2FoldChange.y, method = "pearson")
 table(merged_for_plot$regulation)
 
-gene_names <- c("EDN1", "ID3", "CCN2", "SERPINE1", "KLF4", "KLF2", "TEK", "CYP1B1")
+gene_names <- c("EDN1", "ID3", "CCN2", "SERPINE1", "KLF4", "KLF2", "TEK", "CYP1B1") #define gene names to plot
 genes_to_plot <- merged_for_plot %>% filter(hgnc_symbol %in% gene_names)
 
 ggplot(merged_for_plot, aes(x = log2FoldChange.x, y = log2FoldChange.y, color = regulation)) +
@@ -74,3 +76,5 @@ write.table(conc_up_complete, "conc_up_complete_os-vs-ps.txt", sep = "\t", row.n
 
 write.table(convers_reg_bed, "convers-reg-os-ps.bed", sep = "\t", row.names = F, quote = F)
 write.table(convers_reg_complete, "convers-reg_os-vs-ps-complete.txt", sep = "\t", row.names = F, quote = F)
+
+##continue with motif enrichment etc.
