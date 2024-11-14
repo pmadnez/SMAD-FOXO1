@@ -7,7 +7,7 @@ cbind.fill <- function(...){
 }
 
 #Working Directory
-setwd("Z:/Shared Workspaces/Paul2Jerome/Mechanogenomics/Endothel Zellen/PLAs/GATA_FoxO_SMADs_n1/")
+setwd("Z:/data/")
 
 #Total OS
 
@@ -82,30 +82,3 @@ results_PS_nuclear <- as.data.frame(t(rbind(list.files_nuclear_PS, results_vecto
 
 write.table(results_PS_nuclear, "PLA_PS_nuclear-events.csv")
 
-
-#grep single channels
-ch1_total <- cbind(results_PS_total[grep("ch1", results_PS_total$list.files_total_PS),], results_OS_total[grep("ch1", results_OS_total$list.files_total_OS),])
-write.csv(ch1_total, "ch1_total.csv")
-ch2_total <- cbind(results_PS_total[grep("ch2", results_PS_total$list.files_total_PS),], results_OS_total[grep("ch2", results_OS_total$list.files_total_OS),])
-write.csv(ch2_total, "ch2_total.csv")
-ch3_total <- cbind.fill(results_PS_total[grep("ch3", results_PS_total$list.files_total_PS),], results_OS_total[grep("ch3", results_OS_total$list.files_total_OS),])
-write.csv(ch3_total, "ch3_total.csv")
-ch4_total <- cbind.fill(results_PS_total[grep("ch4", results_PS_total$list.files_total_PS),], results_OS_total[grep("ch4", results_OS_total$list.files_total_OS),])
-write.csv(ch4_total, "ch4_total.csv")
-ch5_total <- cbind(results_PS_total[grep("ch5", results_PS_total$list.files_total_PS),], results_OS_total[grep("ch5", results_OS_total$list.files_total_OS),])
-write.csv(ch5_total, "ch5_total.csv")
-ch6_total <- cbind(results_PS_total[grep("ch6", results_PS_total$list.files_total_PS),], results_OS_total[grep("ch6", results_OS_total$list.files_total_OS),])
-write.csv(ch6_total, "ch6_total.csv")
-
-ch1_nuclear <- cbind(results_PS_nuclear[grep("ch1", results_PS_nuclear$list.files_nuclear_PS),], results_OS_nuclear[grep("ch1", results_OS_nuclear$list.files_nuclear_OS),])
-write.csv(ch1_nuclear, "ch1_nuclear.csv")
-ch2_nuclear <- cbind(results_PS_nuclear[grep("ch2", results_PS_nuclear$list.files_nuclear_PS),], results_OS_nuclear[grep("ch2", results_OS_nuclear$list.files_nuclear_OS),])
-write.csv(ch2_nuclear, "ch2_nuclear.csv")
-ch3_nuclear <- cbind.fill(results_PS_nuclear[grep("ch3", results_PS_nuclear$list.files_nuclear_PS),], results_OS_nuclear[grep("ch3", results_OS_nuclear$list.files_nuclear_OS),])
-write.csv(ch3_nuclear, "ch3_nuclear.csv")
-ch4_nuclear <- cbind.fill(results_PS_nuclear[grep("ch4", results_PS_nuclear$list.files_nuclear_PS),], results_OS_nuclear[grep("ch4", results_OS_nuclear$list.files_nuclear_OS),])
-write.csv(ch4_nuclear, "ch4_nuclear.csv")
-ch5_nuclear <- cbind(results_PS_nuclear[grep("ch5", results_PS_nuclear$list.files_nuclear_PS),], results_OS_nuclear[grep("ch5", results_OS_nuclear$list.files_nuclear_OS),])
-write.csv(ch5_nuclear, "ch5_nuclear.csv")
-ch6_nuclear <- cbind(results_PS_nuclear[grep("ch6", results_PS_nuclear$list.files_nuclear_PS),], results_OS_nuclear[grep("ch6", results_OS_nuclear$list.files_nuclear_OS),])
-write.csv(ch6_nuclear, "ch6_nuclear.csv")
